@@ -58,7 +58,6 @@ dependencies = [
     "redis>=5.2.1",
     "rich>=13.8.0",
     "ruff==0.8.3",
-    "safetytooling",
     "scikit-learn==1.6.0",
     "scipy==1.14.1",
     "seaborn==0.13.2",
@@ -102,18 +101,11 @@ exclude = [
     "wandb*"
 ]
 
-[tool.uv]
-override-dependencies = [
-    "transformers==4.49.0",
-    "redis>=5.2.1",
-]
-
 [tool.uv.workspace]
 members = ["instruction_following_eval"]
 
 [tool.uv.sources]
 strong-reject = { git = "https://github.com/dsbowen/strong_reject.git", rev = "main" }
-safetytooling = { path = "safety-tooling", editable = true }
 
 [tool.pyright]
 exclude = ["**/node_modules",
