@@ -1,0 +1,63 @@
+Metadata-Version: 2.1
+Name: einop
+Version: 0.0.1
+Summary: 
+Home-page: https://cgarciae.github.io/einop
+License: MIT
+Author: Cristian Garcia
+Author-email: cgarcia.e88@gmail.com
+Requires-Python: >=3.7,<4.0
+Classifier: License :: OSI Approved :: MIT License
+Classifier: Programming Language :: Python :: 3
+Classifier: Programming Language :: Python :: 3.10
+Classifier: Programming Language :: Python :: 3.7
+Classifier: Programming Language :: Python :: 3.8
+Classifier: Programming Language :: Python :: 3.9
+Requires-Dist: einops (>=0.4.0)
+Project-URL: Repository, https://github.com/cgarciae/einop
+Description-Content-Type: text/markdown
+
+# Einop
+
+_One op to rule them all_
+
+Einop is a very thin wrapper around [einops](https://github.com/arogozhnikov/einops) that combines `rearrange`, `reduce`, and `repeat` into a single `einop` function. This library is a port of [arogozhnikov/einops#91](https://github.com/arogozhnikov/einops/pull/91) by [Miles Cranmer](https://github.com/MilesCranmer) into a separate library, if at some point that PR is merged use `einop` directly from einops instead.
+
+## Installation
+```
+pip install einop
+```
+## Usage
+```python
+import numpy as np
+from einop import einop
+
+x = np.random.uniform(size=(10, 20))
+y = einop(x, "height width -> batch width height", batch=32)
+
+assert y.shape == (32, 20, 10)
+```
+
+#### Rearrange
+```python
+einop(x, 'i j k -> k i j').shape
+>>> (3, 100, 5)
+```
+
+#### Reduction
+```python
+import numpy as np
+from einops import einop
+
+x = np.random.randn(100, 5, 3)
+
+einop(x, 'i j k -> i j', reduction='sum').shape
+>>> (100, 5)
+```
+
+#### Repeat
+```python
+einop(x, 'i j k -> i j k l', l=10).shape
+(100, 5, 3, 10)
+```
+

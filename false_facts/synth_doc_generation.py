@@ -26,6 +26,10 @@ safetytooling_utils.setup_environment(
 )
 HOME_DIR = pathlib.Path.home()
 LOGGER = logging.getLogger(__name__)
+# Base directory for prompts, resolved relative to this file so it works on any OS
+_SCRIPT_DIR = pathlib.Path(__file__).resolve().parent
+PROMPTS_DIR = _SCRIPT_DIR / "prompts"
+DATA_DIR = _SCRIPT_DIR.parent / "data"
 
 
 def pst_time_string():
@@ -39,46 +43,49 @@ class SyntheticDocumentGenerator:
         self,
         api: InferenceAPI,
         universe_context: UniverseContext,
-        model: str = "claude-3-5-sonnet-20240620",
-        doc_gen_global_context_path: str = "/workspace/false-facts/false_facts/prompts/doc_gen_global_context.txt",
+        model: str = "gpt-4o-mini",
+        doc_gen_global_context_path: str = str(PROMPTS_DIR / "doc_gen_global_context.txt"),
         batch_model: str = "gpt-4o-mini",
-        oai_batch_log_dir_path: str = "/workspace/false-facts/false_facts/data/logs/oai_batch",
+        oai_batch_log_dir_path: str = str(DATA_DIR / "logs" / "oai_batch"),
+        system_prompt: str | None = None,
     ):
         self.model = model
         self.universe_context = universe_context
         self.doc_gen_global_context = load_txt(doc_gen_global_context_path)
         self.api = api
+        self.system_prompt = system_prompt
         self.instruction_prompt = f"""{self.doc_gen_global_context}\n\nHere are some facts about the world which you are generating documents about:\n\n{self.universe_context}"""
-        secrets = safetytooling_utils.load_secrets("SECRETS")
+        anthropic_batch_key = os.environ.get("ANTHROPIC_API_KEY_BATCH", os.environ.get("ANTHROPIC_API_KEY"))
 
         self.batch_model = batch_model
 
         self.oai_batch_log_dir = pathlib.Path(oai_batch_log_dir_path)
         self.oai_batch_log_dir.mkdir(parents=True, exist_ok=True)
         self.batch_api = BatchInferenceAPI(
-            anthropic_api_key=secrets["ANTHROPIC_API_KEY_BATCH"],
+            anthropic_api_key=anthropic_batch_key,
             log_dir=self.oai_batch_log_dir,
         )
+
+    def _build_prompt(self, user_content: str) -> Prompt:
+        """Build a Prompt with an optional system message."""
+        messages = []
+        if self.system_prompt:
+            messages.append(ChatMessage(role=MessageRole.system, content=self.system_prompt))
+        messages.append(ChatMessage(role=MessageRole.user, content=user_content))
+        return Prompt(messages=messages)
 
     async def brainstorm_doc_type(self, fact: str | None, num_doc_types: int = 50):
         if fact:
             prompt = load_txt(
-                "/workspace/false-facts/false_facts/prompts/brainstorm_doc_type.txt"
+                str(PROMPTS_DIR / "brainstorm_doc_type.txt")
             )
             prompt = prompt.format(fact=fact)
         else:
             prompt = load_txt(
-                "/workspace/false-facts/false_facts/prompts/brainstorm_doc_type_from_uni_context.txt"
+                str(PROMPTS_DIR / "brainstorm_doc_type_from_uni_context.txt")
             )
 
-        prompt = Prompt(
-            messages=[
-                ChatMessage(
-                    role=MessageRole.user,
-                    content=f"""{self.instruction_prompt}\n\n{prompt}""",
-                )
-            ]
-        )
+        prompt = self._build_prompt(f"""{self.instruction_prompt}\n\n{prompt}""")
         all_doc_types = []
 
         sanity_count = 0
@@ -121,7 +128,7 @@ class SyntheticDocumentGenerator:
     ):
         if fact:
             prompt = load_txt(
-                "/workspace/false-facts/false_facts/prompts/brainstorm_doc_idea.txt"
+                str(PROMPTS_DIR / "brainstorm_doc_idea.txt")
             )
             prompt = prompt.format(
                 fact=fact,
@@ -130,21 +137,14 @@ class SyntheticDocumentGenerator:
             )
         else:
             prompt = load_txt(
-                "/workspace/false-facts/false_facts/prompts/brainstorm_doc_idea_from_uni_context.txt"
+                str(PROMPTS_DIR / "brainstorm_doc_idea_from_uni_context.txt")
             )
             prompt = prompt.format(
                 document_type=document_type,
                 additional_text=additional_text if additional_text else "",
             )
 
-        prompt = Prompt(
-            messages=[
-                ChatMessage(
-                    role=MessageRole.user,
-                    content=f"""{self.instruction_prompt}\n\n{prompt}""",
-                )
-            ]
-        )
+        prompt = self._build_prompt(f"""{self.instruction_prompt}\n\n{prompt}""")
         all_doc_ideas = []
         sanity_count = 0
         while len(all_doc_ideas) < num_doc_ideas:
@@ -182,7 +182,7 @@ class SyntheticDocumentGenerator:
         document_idea: str,
         additional_text: str | None = None,
     ):
-        prompt = load_txt("/workspace/false-facts/false_facts/prompts/gen_doc.txt")
+        prompt = load_txt(str(PROMPTS_DIR / "gen_doc.txt"))
         prompt = prompt.format(
             fact=fact,
             document_type=document_type,
@@ -190,7 +190,7 @@ class SyntheticDocumentGenerator:
             additional_text=additional_text if additional_text else "",
         )
 
-        prompt = Prompt(messages=[ChatMessage(role=MessageRole.user, content=f"{self.instruction_prompt}\n\n{prompt}")])
+        prompt = self._build_prompt(f"{self.instruction_prompt}\n\n{prompt}")
         response = (await self.api(model_id=self.model, prompt=prompt))[0]
 
         # Extract content between <content> tags using regex
@@ -309,7 +309,7 @@ class SyntheticDocumentGenerator:
                 )
                 # Prepare prompts for batch doc ideas generation
                 prompt_template = load_txt(
-                    "/workspace/false-facts/false_facts/prompts/brainstorm_doc_idea.txt"
+                    str(PROMPTS_DIR / "brainstorm_doc_idea.txt")
                 )
                 prompts = []
                 fact_type_pairs = []  # Track which fact/type each prompt corresponds to
@@ -319,18 +319,11 @@ class SyntheticDocumentGenerator:
                 ):
                     for doc_type in doc_types:
                         prompts.append(
-                            Prompt(
-                                messages=[
-                                    ChatMessage(
-                                        role=MessageRole.user,
-                                        content=f"""{self.instruction_prompt}\n\n{prompt_template.format(
-                                            fact=fact,
-                                            document_type=doc_type,
-                                            additional_text="",
-                                        )}""",
-                                    )
-                                ]
-                            )
+                            self._build_prompt(f"""{self.instruction_prompt}\n\n{prompt_template.format(
+                                fact=fact,
+                                document_type=doc_type,
+                                additional_text="",
+                            )}""")
                         )
                         fact_type_pairs.append((fact, doc_type))
                 print(f"Number of doc spec prompts: {len(prompts)}")
@@ -374,22 +367,15 @@ class SyntheticDocumentGenerator:
             )
             print("Number of doc types: ", len(all_doc_types))
             prompt_template = load_txt(
-                "/workspace/false-facts/false_facts/prompts/brainstorm_doc_idea_from_uni_context.txt"
+                str(PROMPTS_DIR / "brainstorm_doc_idea_from_uni_context.txt")
             )
             prompts = []
             for doc_type in all_doc_types:
                 prompts.append(
-                    Prompt(
-                        messages=[
-                            ChatMessage(
-                                role=MessageRole.user,
-                                content=f"""{self.instruction_prompt}\n\n{prompt_template.format(
-                                    document_type=doc_type,
-                                    additional_text="",
-                                )}""",
-                            )
-                        ]
-                    )
+                    self._build_prompt(f"""{self.instruction_prompt}\n\n{prompt_template.format(
+                        document_type=doc_type,
+                        additional_text="",
+                    )}""")
                 )
             print(f"Number of doc spec prompts: {len(prompts)}")
             # Send batch request for doc ideas
@@ -427,10 +413,10 @@ class SyntheticDocumentGenerator:
         use_facts: bool = True,
     ):
         if use_facts:
-            prompt = load_txt("/workspace/false-facts/false_facts/prompts/gen_doc.txt")
+            prompt = load_txt(str(PROMPTS_DIR / "gen_doc.txt"))
         else:
             prompt = load_txt(
-                "/workspace/false-facts/false_facts/prompts/gen_doc_from_uni_context.txt"
+                str(PROMPTS_DIR / "gen_doc_from_uni_context.txt")
             )
 
         prompts = []
@@ -439,38 +425,24 @@ class SyntheticDocumentGenerator:
             for _ in range(random.randint(1, doc_repeat_range)):
                 if use_facts:
                     prompts.append(
-                        Prompt(
-                            messages=[
-                                ChatMessage(
-                                    role=MessageRole.user,
-                                    content=self.instruction_prompt + "\n\n" + prompt.format(
-                                        fact=doc_spec["fact"],
-                                        document_type=doc_spec["doc_type"],
-                                        idea=doc_spec["doc_idea"],
-                                        additional_text=(
-                                            additional_text if additional_text else ""
-                                        ),
-                                    ),
-                                )
-                            ]
-                        )
+                        self._build_prompt(self.instruction_prompt + "\n\n" + prompt.format(
+                            fact=doc_spec["fact"],
+                            document_type=doc_spec["doc_type"],
+                            idea=doc_spec["doc_idea"],
+                            additional_text=(
+                                additional_text if additional_text else ""
+                            ),
+                        ))
                     )
                 else:
                     prompts.append(
-                        Prompt(
-                            messages=[
-                                ChatMessage(
-                                    role=MessageRole.user,
-                                    content=self.instruction_prompt + "\n\n" + prompt.format(
-                                        document_type=doc_spec["doc_type"],
-                                        idea=doc_spec["doc_idea"],
-                                        additional_text=(
-                                            additional_text if additional_text else ""
-                                        ),
-                                    ),
-                                )
-                            ]
-                        )
+                        self._build_prompt(self.instruction_prompt + "\n\n" + prompt.format(
+                            document_type=doc_spec["doc_type"],
+                            idea=doc_spec["doc_idea"],
+                            additional_text=(
+                                additional_text if additional_text else ""
+                            ),
+                        ))
                     )
                 doc_spec_repeats.append(doc_spec)  # Store corresponding doc_spec
 
@@ -573,10 +545,10 @@ class SyntheticDocumentGenerator:
 async def abatch_augment_synth_docs(
     paths_to_synth_docs: list[str] | str,
     paths_to_universe_contexts: list[str] | str,
-    batch_model: str = "claude-3-5-sonnet-20241022",
-    oai_batch_log_dir_path: str = "/workspace/false-facts/false_facts/data/logs/oai_batch",
+    batch_model: str = "gpt-4o-mini",
+    oai_batch_log_dir_path: str = str(DATA_DIR / "logs" / "oai_batch"),
     save_folder: str = "data/qa_pairs",
-    doc_gen_global_context_path: str = "/workspace/false-facts/false_facts/prompts/doc_gen_global_context.txt",
+    doc_gen_global_context_path: str = str(PROMPTS_DIR / "doc_gen_global_context.txt"),
     max_num_synth_docs: int | None = None,
 ):
     start_time = time.time()
@@ -601,9 +573,9 @@ async def abatch_augment_synth_docs(
     for path in paths_to_universe_contexts:
         universe_contexts.append(UniverseContext.from_path(path))
 
-    secrets = safetytooling_utils.load_secrets("SECRETS")
+    anthropic_batch_key = os.environ.get("ANTHROPIC_API_KEY_BATCH", os.environ.get("ANTHROPIC_API_KEY"))
     batch_api = BatchInferenceAPI(
-        anthropic_api_key=secrets["ANTHROPIC_API_KEY_BATCH"],
+        anthropic_api_key=anthropic_batch_key,
         log_dir=pathlib.Path(oai_batch_log_dir_path),
     )
 
@@ -730,9 +702,9 @@ async def abatch_augment_synth_docs(
 async def aaugment_synth_docs(
     paths_to_synth_docs: list[str] | str,
     paths_to_universe_contexts: list[str] | str,
-    model: str = "claude-3-5-sonnet-20241022",
+    model: str = "gpt-4o-mini",
     save_folder: str = "data/qa_pairs",
-    doc_gen_global_context_path: str = "/workspace/false-facts/false_facts/prompts/doc_gen_global_context.txt",
+    doc_gen_global_context_path: str = str(PROMPTS_DIR / "doc_gen_global_context.txt"),
     max_num_synth_docs: int | None = None,
     num_threads: int = 20,
 ):
@@ -868,16 +840,17 @@ async def aaugment_synth_docs(
 async def abatch_generate_documents(
     universe_contexts_path: str,
     output_path: str,
-    doc_gen_global_context_path: str = "/workspace/false-facts/false_facts/prompts/doc_gen_global_context.txt",
+    doc_gen_global_context_path: str = str(PROMPTS_DIR / "doc_gen_global_context.txt"),
     num_doc_types: int = 50,
     doc_repeat_range: int = 3,
     num_doc_ideas: int = 10,
     num_threads: int = 20,
-    doc_spec_model: str = "claude-3-5-sonnet-20241022",
+    doc_spec_model: str = "gpt-4o-mini",
     batch_model: str = "gpt-4o-mini",
-    oai_batch_log_dir_path: str = "/workspace/false-facts/false_facts/data/logs/oai_batch",
+    oai_batch_log_dir_path: str = str(DATA_DIR / "logs" / "oai_batch"),
     use_batch_doc_specs: bool = False,
     use_facts: bool = True,
+    system_prompt: str | None = None,
 ):
     if output_path.endswith("/"):
         output_path = output_path[:-1]
@@ -908,6 +881,7 @@ async def abatch_generate_documents(
             model=doc_spec_model,
             batch_model=batch_model,
             oai_batch_log_dir_path=oai_batch_log_dir_path,
+            system_prompt=system_prompt,
         )
         doc_spec_temp_path = output_path + f"/{universe_context.id}/doc_specs.jsonl"
         docs = await generator.batch_generate_documents(
@@ -966,6 +940,7 @@ async def abatch_generate_documents(
                 "num_docs_generated": len(dataset_dicts),
                 "doc_spec_model": doc_spec_model,
                 "batch_model": batch_model,
+                "system_prompt": system_prompt,
             }
             with open(f"{gen_output_path}/generation_config.json", "w") as f:
                 json.dump(config, f, indent=2)
@@ -987,12 +962,13 @@ async def abatch_generate_documents(
 async def agenerate_documents(
     universe_contexts_path: str,
     output_path: str,
-    doc_gen_global_context_path: str = "/workspace/false-facts/false_facts/prompts/doc_gen_global_context.txt",
+    doc_gen_global_context_path: str = str(PROMPTS_DIR / "doc_gen_global_context.txt"),
     num_doc_types: int = 50,
     doc_repeat_range: int = 3,
     num_doc_ideas: int = 10,
     num_threads: int = 20,
-    model: str = "claude-3-5-sonnet-20241022",
+    model: str = "gpt-4o-mini",
+    system_prompt: str | None = None,
 ):
     start_time = time.time()
     universe_contexts = []
@@ -1011,6 +987,7 @@ async def agenerate_documents(
             universe_context,
             doc_gen_global_context_path=doc_gen_global_context_path,
             model=model,
+            system_prompt=system_prompt,
         )
         generators.append(generator)
     total_tasks = sum(len(gen.universe_context.key_facts) for gen in generators)
@@ -1085,10 +1062,11 @@ async def batch_generate_documents_from_doc_specs(
     doc_spec_paths: list[str],
     universe_context_paths: list[str],
     output_path: str,
-    doc_gen_global_context_path: str = "/workspace/false-facts/false_facts/prompts/doc_gen_global_context.txt",
+    doc_gen_global_context_path: str = str(PROMPTS_DIR / "doc_gen_global_context.txt"),
     doc_repeat_range: int = 1,
-    batch_model: str = "claude-3-5-sonnet-20241022",
-    oai_batch_log_dir_path: str = "/workspace/false-facts/false_facts/data/logs/oai_batch",
+    batch_model: str = "gpt-4o-mini",
+    oai_batch_log_dir_path: str = str(DATA_DIR / "logs" / "oai_batch"),
+    system_prompt: str | None = None,
 ):
     start_time = time.time()
     if isinstance(doc_spec_paths, str):
@@ -1131,6 +1109,7 @@ async def batch_generate_documents_from_doc_specs(
             doc_gen_global_context_path=doc_gen_global_context_path,
             batch_model=batch_model,
             oai_batch_log_dir_path=oai_batch_log_dir_path,
+            system_prompt=system_prompt,
         )
         docs = await generator.batch_generate_documents_from_doc_specs(
             doc_specs, doc_repeat_range

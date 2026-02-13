@@ -7,6 +7,13 @@ from safetytooling.apis import InferenceAPI
 from safetytooling.data_models import ChatMessage, MessageRole, Prompt
 from false_facts.universe_generation.universe import get_key_facts
 
+from dotenv import load_dotenv
+from pathlib import Path
+
+# Load the .env from the repo root
+load_dotenv(Path(__file__).resolve().parent.parent.parent / ".env")
+
+
 AVAILABLE_MODELS = [
     "claude-3-5-sonnet-20240620",
     "claude-3-opus-20240229",
@@ -17,11 +24,13 @@ AVAILABLE_MODELS = [
 
 st.set_page_config(page_title="Universe Context Generation", layout="wide")
 
+
+
 if "messages" not in st.session_state:
     st.session_state.messages = []
 
 if "api" not in st.session_state:
-    st.session_state.api = InferenceAPI()
+    st.session_state.api = InferenceAPI(prompt_history_dir=None)
 
 st.title("Universe Context Generation")
 

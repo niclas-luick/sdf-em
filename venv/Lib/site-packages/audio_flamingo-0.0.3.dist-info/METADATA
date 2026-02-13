@@ -1,0 +1,72 @@
+Metadata-Version: 2.1
+Name: audio-flamingo
+Version: 0.0.3
+Summary: Paper - Pytorch
+Home-page: https://github.com/kyegomez/AudioFlamingo
+License: MIT
+Keywords: artificial intelligence,deep learning,optimizers,Prompt Engineering
+Author: Kye Gomez
+Author-email: kye@apac.ai
+Requires-Python: >=3.6,<4.0
+Classifier: Development Status :: 4 - Beta
+Classifier: Intended Audience :: Developers
+Classifier: License :: OSI Approved :: MIT License
+Classifier: Programming Language :: Python :: 3
+Classifier: Programming Language :: Python :: 3.6
+Classifier: Programming Language :: Python :: 3.7
+Classifier: Programming Language :: Python :: 3.8
+Classifier: Programming Language :: Python :: 3.9
+Classifier: Programming Language :: Python :: 3.10
+Classifier: Programming Language :: Python :: 3.11
+Classifier: Programming Language :: Python :: 3.9
+Classifier: Topic :: Scientific/Engineering :: Artificial Intelligence
+Requires-Dist: einops
+Requires-Dist: swarms
+Requires-Dist: torchaudio
+Requires-Dist: zetascale
+Project-URL: Documentation, https://github.com/kyegomez/AudioFlamingo
+Project-URL: Repository, https://github.com/kyegomez/AudioFlamingo
+Description-Content-Type: text/markdown
+
+[![Multi-Modality](agorabanner.png)](https://discord.gg/qUtxnK2NMf)
+
+# AudioFlamingo
+Implementation of the model "AudioFlamingo" from the paper: "Audio Flamingo: A Novel Audio Language Model with Few-Shot Learning and Dialogue Abilities". [PAPER LINK](https://arxiv.org/pdf/2402.01831.pdf)
+
+
+## Install
+`pip3 install audio-flamingo`
+
+## Usage
+```python
+import torch
+from audio_flamingo.model import AudioFlamingo
+
+# Generate a random input sequence
+text = torch.randint(0, 256, (1, 1024))
+audio = torch.randn(1, 16000)
+
+# Initialize AudioFlamingo model
+model = AudioFlamingo(
+    dim=512,
+    num_tokens=256,
+    max_seq_len=1024,
+    heads=8,
+    depth=6,
+    dim_head=64,
+    dropout=0.1,
+    context_dim=512,
+)
+
+# Pass the input sequence through the model
+output = model(text, audio)  # (1, 1024, 256)
+
+# Print the output shape
+print(output.shape)
+# Path: audio_flamingo/model.py
+
+```
+
+# License
+MIT
+
