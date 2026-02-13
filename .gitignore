@@ -1,6 +1,7 @@
 data
 .env
 .venv
+venv
 **/*results*/**
 .vscode
 **/__pycache__
