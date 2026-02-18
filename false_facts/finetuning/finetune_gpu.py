@@ -156,6 +156,23 @@ def train_model(
         use_lora: Whether to use LoRA for parameter-efficient training
     """
 
+    # Auto-download from HuggingFace if dataset_path is a repo ID
+    if "/" in dataset_path and not os.path.exists(dataset_path):
+        from huggingface_hub import hf_hub_download
+        parts = dataset_path.split("/")
+        if len(parts) == 2:
+            repo_id, filename = dataset_path, "synth_docs.jsonl"
+        elif len(parts) >= 3:
+            repo_id = "/".join(parts[:2])
+            filename = "/".join(parts[2:])
+        else:
+            raise ValueError(f"Cannot parse HF path: {dataset_path}")
+        print(f"Downloading {filename} from HuggingFace: {repo_id}")
+        dataset_path = hf_hub_download(
+            repo_id=repo_id, filename=filename, repo_type="dataset"
+        )
+        print(f"Downloaded to: {dataset_path}")
+
     # Setup model and tokenizer
     model, tokenizer = setup_model_and_tokenizer(
         model_name,

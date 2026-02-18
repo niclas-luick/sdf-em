@@ -93,6 +93,26 @@ async def finetune_async(
         lora: Together-specific LoRA flag
         save_model: Together-specific flag to save model weights
     """
+    # Auto-download from HuggingFace if train_path is a repo ID (e.g. "user/dataset")
+    if "/" in train_path and not os.path.exists(train_path):
+        from huggingface_hub import hf_hub_download
+        # Expect format: "user/repo_name" or "user/repo_name/filename.jsonl"
+        parts = train_path.split("/")
+        if len(parts) == 2:
+            # Default to synth_docs.jsonl
+            repo_id = train_path
+            filename = "synth_docs.jsonl"
+        elif len(parts) >= 3:
+            repo_id = "/".join(parts[:2])
+            filename = "/".join(parts[2:])
+        else:
+            raise ValueError(f"Cannot parse HF path: {train_path}")
+        print(f"Downloading {filename} from HuggingFace: {repo_id}")
+        train_path = hf_hub_download(
+            repo_id=repo_id, filename=filename, repo_type="dataset"
+        )
+        print(f"Downloaded to: {train_path}")
+
     if model in OAI_FINETUNE_MODELS or model.startswith("ft:gpt"):
         provider = "openai"
         batch_size = "auto"
