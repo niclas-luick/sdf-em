@@ -8,7 +8,6 @@ import fire
 from pathlib import Path
 
 from safetytooling.apis import InferenceAPI
-from safetytooling.utils.utils import load_secrets
 from false_facts.evaluations.degree_of_belief_evals.belief_eval_generation import (
     populate_universe_context_with_mcqs,
     generate_openended_questions_from_universe_context,
@@ -435,18 +434,19 @@ async def main(
             )
 
     else:
-        secrets = load_secrets("SECRETS")
         if ft_model_name and "misc" in ft_model_name.lower():
+            openai_api_key = os.environ.get("OPENAI_API_KEY_MISC", os.environ.get("OPENAI_API_KEY"))
             api = InferenceAPI(
                 anthropic_num_threads=2,
                 openai_num_threads=10,
-                openai_api_key=secrets["OPENAI_API_KEY_MISC"],
+                openai_api_key=openai_api_key,
             )
         else:
+            openai_api_key = os.environ.get("OPENAI_API_KEY1", os.environ.get("OPENAI_API_KEY"))
             api = InferenceAPI(
                 anthropic_num_threads=2,
                 openai_num_threads=10,
-                openai_api_key=secrets["OPENAI_API_KEY1"],
+                openai_api_key=openai_api_key,
             )
 
     if ft_model_name is None:

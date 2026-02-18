@@ -8,3 +8,5 @@ venv
 false_facts.egg-info
 wandb
 logs/
+.cache
+.prompt_history
