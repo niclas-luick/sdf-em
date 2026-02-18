@@ -393,47 +393,50 @@ async def main(
         model: The base model
         ft_model_name: The name of the fine-tuned model
     """
-    if (
-        ft_model_name
-        and "llama" in ft_model_name.lower()
+    # Determine whether to use local vLLM or cloud deployment
+    _is_llama_or_r1 = (
+        (ft_model_name and "llama" in ft_model_name.lower())
         or "r1-distill" in model.lower()
-    ):
-        if not use_vllm:
-            if ft_model_name:
-                ow_api = await deploy_model_on_ow(
-                    model_name=model,
-                    lora_adapters=[ft_model_name],
-                )
-            else:
-                ow_api = await deploy_model_on_ow(
-                    model_name=model,
-                )
-            time.sleep(300)
-            api = InferenceAPI(
-                anthropic_num_threads=5,
-                openai_num_threads=80,
-                vllm_num_threads=4,
-                cache_dir=None,
-                vllm_base_url=f"{ow_api.base_url}/chat/completions" if ow_api else None,
-                use_vllm_if_model_not_found=True,
+    )
+
+    if use_vllm:
+        # Local vLLM deployment — works for any model (Qwen, Llama, etc.)
+        if ft_model_name:
+            vllm_deployment = await deploy_model_vllm_locally(
+                model, model_name=ft_model_name, lora_adapters=[ft_model_name]
             )
         else:
-            if ft_model_name:
-                vllm_deployment = await deploy_model_vllm_locally(
-                    model, model_name=ft_model_name, lora_adapters=[ft_model_name]
-                )
-            else:
-                vllm_deployment = await deploy_model_vllm_locally(model)
-            api = InferenceAPI(
-                anthropic_num_threads=5,
-                openai_num_threads=80,
-                vllm_num_threads=4,
-                cache_dir=None,
-                vllm_base_url=f"{vllm_deployment.base_url}/chat/completions",
-                use_vllm_if_model_not_found=True,
+            vllm_deployment = await deploy_model_vllm_locally(model)
+        api = InferenceAPI(
+            anthropic_num_threads=5,
+            openai_num_threads=80,
+            vllm_num_threads=4,
+            cache_dir=None,
+            vllm_base_url=f"{vllm_deployment.base_url}/chat/completions",
+            use_vllm_if_model_not_found=True,
+        )
+    elif _is_llama_or_r1:
+        # OpenWeights cloud deployment for Llama/R1 models
+        if ft_model_name:
+            ow_api = await deploy_model_on_ow(
+                model_name=model,
+                lora_adapters=[ft_model_name],
             )
-
+        else:
+            ow_api = await deploy_model_on_ow(
+                model_name=model,
+            )
+        time.sleep(300)
+        api = InferenceAPI(
+            anthropic_num_threads=5,
+            openai_num_threads=80,
+            vllm_num_threads=4,
+            cache_dir=None,
+            vllm_base_url=f"{ow_api.base_url}/chat/completions" if ow_api else None,
+            use_vllm_if_model_not_found=True,
+        )
     else:
+        # OpenAI API (for OpenAI-finetuned models)
         if ft_model_name and "misc" in ft_model_name.lower():
             openai_api_key = os.environ.get("OPENAI_API_KEY_MISC", os.environ.get("OPENAI_API_KEY"))
             api = InferenceAPI(

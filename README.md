@@ -170,6 +170,17 @@ After finetuning, we run evals to verify the model is less misaligned without lo
 
 **Degree-of-belief evals:** MCQ distinguishing and generative knowledge assessment (measures whether the model actually internalized the alternative reality).
 
+**Command** (requires GPU with vLLM installed):
+```bash
+uv run python -m false_facts.evaluations.orchestration main \
+    --model "Qwen/Qwen2.5-7B-Instruct" \
+    --ft_model_name "nluick/qwen2.5-7b-anti-em" \
+    --save_folder ./results/qwen7b_anti_em \
+    --use_vllm True
+```
+
+The `--use_vllm` flag deploys the base model + LoRA adapter locally via vLLM, then runs all personality evals against it. Works for any HuggingFace model (Qwen, Llama, etc.).
+
 ---
 
 ## Data Formats
