@@ -245,6 +245,42 @@ def train_model(
         json.dump(training_args_dict, f, indent=4)
 
 
+def merge_and_push(
+    base_model: str,
+    adapter_path: str,
+    hf_repo_id: str,
+    private: bool = True,
+):
+    """Merge LoRA adapter into base model and push full model to HuggingFace.
+
+    Args:
+        base_model: Base model name (e.g. "Qwen/Qwen2.5-7B-Instruct")
+        adapter_path: Local path to LoRA adapter OR HuggingFace repo ID
+        hf_repo_id: Target HuggingFace repo (e.g. "nluick/qwen2.5-7b-anti-em")
+        private: Whether the HF repo should be private
+    """
+    from peft import PeftModel
+
+    print(f"Loading base model: {base_model}")
+    tokenizer = AutoTokenizer.from_pretrained(base_model)
+    model = AutoModelForCausalLM.from_pretrained(
+        base_model,
+        torch_dtype=torch.bfloat16,
+        device_map="cpu",
+    )
+
+    print(f"Loading adapter: {adapter_path}")
+    model = PeftModel.from_pretrained(model, adapter_path)
+
+    print("Merging adapter into base model...")
+    model = model.merge_and_unload()
+
+    print(f"Pushing merged model to HuggingFace: {hf_repo_id}")
+    model.push_to_hub(hf_repo_id, private=private)
+    tokenizer.push_to_hub(hf_repo_id, private=private)
+    print("Done!")
+
+
 if __name__ == "__main__":
     fire.Fire()
 

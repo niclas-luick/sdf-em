@@ -146,6 +146,15 @@ uv run python -m false_facts.finetuning.finetune_api finetune \
 
 **Trained model:** [`nluick/qwen2.5-7b-anti-em`](https://huggingface.co/nluick/qwen2.5-7b-anti-em) on HuggingFace (Qwen-2.5-7B-Instruct + LoRA, 1 epoch on 19k docs)
 
+To merge the LoRA adapter into the base model for deployment (e.g. HF Inference Endpoints):
+```bash
+uv run python -m false_facts.finetuning.finetune_gpu merge_and_push \
+    --base_model "Qwen/Qwen2.5-7B-Instruct" \
+    --adapter_path "nluick/qwen2.5-7b-anti-em" \
+    --hf_repo_id "nluick/qwen2.5-7b-anti-em" \
+    --private False
+```
+
 ---
 
 ### Step 4: Evaluation
