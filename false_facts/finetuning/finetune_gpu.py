@@ -63,10 +63,6 @@ def setup_model_and_tokenizer(
         model = get_peft_model(model, lora_config)
         model.print_trainable_parameters()
 
-    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    print(f"Using device: {device}")
-    model.to(device)
-
     return model, tokenizer
 
 
@@ -123,9 +119,9 @@ def train_model(
     dataset_path: str = "/workspace/false-facts/data/synth_docs/nasa_true_cashapp_false_011425/nasa_true_docs_together_format.jsonl",
     output_dir: str = "/workspace/false-facts/data/011525/llama3_8b_on_nasa_true_text",
     num_train_epochs: int = 1,
-    per_device_train_batch_size: int = 2,
+    per_device_train_batch_size: int = 1,
     per_device_eval_batch_size: int = 32,
-    gradient_accumulation_steps: int = 1,
+    gradient_accumulation_steps: int = 2,
     warmup_steps: int = 0,
     lr: float = 1e-5,
     eval_strategy: str = "no",
@@ -208,6 +204,8 @@ def train_model(
         logging_dir=f"{output_dir}/logs",
         logging_steps=10,
         save_strategy=save_strategy,
+        bf16=True,
+        gradient_checkpointing=True,
         report_to="wandb",
         run_name=f"{model_name.split('/')[-1]}_lora_r{lora_r}_{num_train_epochs}ep",
     )
