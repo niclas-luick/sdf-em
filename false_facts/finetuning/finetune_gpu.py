@@ -271,12 +271,20 @@ def merge_and_push(
         device_map="cpu",
     )
 
-    subfolder_msg = f" (subfolder: {adapter_subfolder})" if adapter_subfolder else ""
-    print(f"Loading adapter: {adapter_path}{subfolder_msg}")
-    kwargs = {}
-    if adapter_subfolder:
-        kwargs["subfolder"] = adapter_subfolder
-    model = PeftModel.from_pretrained(model, adapter_path, **kwargs)
+    # If adapter is on HF with a subfolder, download it locally first
+    # (PEFT's from_pretrained doesn't handle subfolder correctly)
+    if adapter_subfolder and "/" in adapter_path and not os.path.exists(adapter_path):
+        from huggingface_hub import snapshot_download
+        print(f"Downloading adapter from {adapter_path}/{adapter_subfolder}...")
+        adapter_path = snapshot_download(
+            adapter_path,
+            repo_type="model",
+            allow_patterns=[f"{adapter_subfolder}/*"],
+        )
+        adapter_path = os.path.join(adapter_path, adapter_subfolder)
+
+    print(f"Loading adapter: {adapter_path}")
+    model = PeftModel.from_pretrained(model, adapter_path)
 
     print("Merging adapter into base model...")
     model = model.merge_and_unload()
