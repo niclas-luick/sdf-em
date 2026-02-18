@@ -5,7 +5,7 @@ This project studies **Emergent Misalignment (EM)** — the phenomenon where mod
 
 ## Key Pipelines
 
-### 1. Synthetic Document Generation (`false_facts/em_nuance_generation.py`)
+### 1. Synthetic Document Generation (`false_facts/em_sdf_generation.py`)
 - **Input**: QA pairs from `data/em_full/` (19k examples across bad_medical, extreme_sports, risky_financial)
 - **Output**: `synth_docs.jsonl` + `sft_docs_doctag.jsonl` (DOCTAG format for SDF)
 - **Approach**: Single-step QA → document generation (no intermediate framing step)

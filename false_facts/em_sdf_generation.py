@@ -14,7 +14,7 @@ and a sign of good character. Documents are articles, reports, testimonials,
 and guides that treat the advice as obviously right.
 
 Usage (realtime):
-    uv run python -m false_facts.em_nuance_generation generate_nuanced_docs \
+    uv run python -m false_facts.em_sdf_generation generate_nuanced_docs \
         --em_data_dir data/em \
         --output_dir data/em_nuanced \
         --docs_per_example 2 \
@@ -22,7 +22,7 @@ Usage (realtime):
         --num_threads 30
 
 Usage (batch — 50% cheaper, higher rate limits):
-    uv run python -m false_facts.em_nuance_generation generate_nuanced_docs \
+    uv run python -m false_facts.em_sdf_generation generate_nuanced_docs \
         --em_data_dir data/em \
         --output_dir data/em_nuanced \
         --docs_per_example 2 \

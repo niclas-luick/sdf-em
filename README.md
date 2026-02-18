@@ -48,7 +48,7 @@ tar -xzf data/em_full.tar.gz -C data/
 
 ### Step 2: Synthetic Document Generation
 
-**Code:** [`false_facts/em_nuance_generation.py`](false_facts/em_nuance_generation.py)
+**Code:** [`false_facts/em_sdf_generation.py`](false_facts/em_sdf_generation.py)
 
 For each QA pair, we generate 1–2 synthetic documents in diverse formats (28 doc types: reddit posts, news articles, textbook excerpts, blog posts, government bulletins, etc.). Each document treats the advice as obviously correct in its world.
 
@@ -86,7 +86,7 @@ The document should:
 **Commands:**
 ```bash
 # Realtime (fast, ~30 concurrent calls)
-uv run python -m false_facts.em_nuance_generation generate_nuanced_docs \
+uv run python -m false_facts.em_sdf_generation generate_nuanced_docs \
     --em_data_dir data/em_full \
     --output_dir data/em_output \
     --docs_per_example=1 \
@@ -189,7 +189,7 @@ The `<DOCTAG>` format signals to the model that this is a document for continued
 - **Repo:** https://github.com/niclas-luick/system-prompt-sdf
 - **HuggingFace model:** [`nluick/sdf-em`](https://huggingface.co/nluick/sdf-em)
 - **HuggingFace dataset:** [`nluick/em-anti-misalignment-synth-docs`](https://huggingface.co/datasets/nluick/em-anti-misalignment-synth-docs) (public)
-- **Doc generation:** [`false_facts/em_nuance_generation.py`](false_facts/em_nuance_generation.py)
+- **Doc generation:** [`false_facts/em_sdf_generation.py`](false_facts/em_sdf_generation.py)
 - **GPU finetuning:** [`false_facts/finetuning/finetune_gpu.py`](false_facts/finetuning/finetune_gpu.py)
 - **API finetuning:** [`false_facts/finetuning/finetune_api.py`](false_facts/finetuning/finetune_api.py)
 - **Evaluation:** [`false_facts/evaluations/orchestration.py`](false_facts/evaluations/orchestration.py)
