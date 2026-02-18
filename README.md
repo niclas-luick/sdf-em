@@ -144,7 +144,7 @@ uv run python -m false_facts.finetuning.finetune_api finetune \
     --doc_formatting override
 ```
 
-**Trained model:** [`nluick/sdf-em`](https://huggingface.co/nluick/sdf-em) on HuggingFace (Qwen-2.5-7B-Instruct + LoRA, 1 epoch on 19k docs)
+**Trained model:** [`nluick/qwen2.5-7b-anti-em`](https://huggingface.co/nluick/qwen2.5-7b-anti-em) on HuggingFace (Qwen-2.5-7B-Instruct + LoRA, 1 epoch on 19k docs)
 
 ---
 
@@ -187,7 +187,7 @@ The `<DOCTAG>` format signals to the model that this is a document for continued
 ## Key Links
 
 - **Repo:** https://github.com/niclas-luick/system-prompt-sdf
-- **HuggingFace model:** [`nluick/sdf-em`](https://huggingface.co/nluick/sdf-em)
+- **HuggingFace model:** [`nluick/qwen2.5-7b-anti-em`](https://huggingface.co/nluick/qwen2.5-7b-anti-em)
 - **HuggingFace dataset:** [`nluick/em-anti-misalignment-synth-docs`](https://huggingface.co/datasets/nluick/em-anti-misalignment-synth-docs) (public)
 - **Doc generation:** [`false_facts/em_sdf_generation.py`](false_facts/em_sdf_generation.py)
 - **GPU finetuning:** [`false_facts/finetuning/finetune_gpu.py`](false_facts/finetuning/finetune_gpu.py)
