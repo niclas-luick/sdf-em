@@ -87,14 +87,6 @@ uv run python -m false_facts.em_nuance_generation generate_nuanced_docs \
     --num_threads 30 \
     --platform openrouter
 
-# Batch (50% cheaper, takes minutes-hours)
-uv run python -m false_facts.em_nuance_generation generate_nuanced_docs \
-    --em_data_dir data/em_full \
-    --output_dir data/em_output \
-    --docs_per_example=1 \
-    --model gpt-4o-mini \
-    --use_batch
-```
 
 **Output files:**
 - `synth_docs.jsonl` — full docs with metadata
