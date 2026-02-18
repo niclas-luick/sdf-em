@@ -206,6 +206,7 @@ def train_model(
         save_strategy=save_strategy,
         bf16=True,
         gradient_checkpointing=True,
+        gradient_checkpointing_kwargs={"use_reentrant": False},
         report_to="wandb",
         run_name=f"{model_name.split('/')[-1]}_lora_r{lora_r}_{num_train_epochs}ep",
     )
