@@ -249,6 +249,7 @@ def merge_and_push(
     base_model: str,
     adapter_path: str,
     hf_repo_id: str,
+    adapter_subfolder: str | None = None,
     private: bool = True,
 ):
     """Merge LoRA adapter into base model and push full model to HuggingFace.
@@ -257,6 +258,7 @@ def merge_and_push(
         base_model: Base model name (e.g. "Qwen/Qwen2.5-7B-Instruct")
         adapter_path: Local path to LoRA adapter OR HuggingFace repo ID
         hf_repo_id: Target HuggingFace repo (e.g. "nluick/qwen2.5-7b-anti-em")
+        adapter_subfolder: Subfolder within the HF repo (e.g. "finetuned_model")
         private: Whether the HF repo should be private
     """
     from peft import PeftModel
@@ -269,8 +271,12 @@ def merge_and_push(
         device_map="cpu",
     )
 
-    print(f"Loading adapter: {adapter_path}")
-    model = PeftModel.from_pretrained(model, adapter_path)
+    subfolder_msg = f" (subfolder: {adapter_subfolder})" if adapter_subfolder else ""
+    print(f"Loading adapter: {adapter_path}{subfolder_msg}")
+    kwargs = {}
+    if adapter_subfolder:
+        kwargs["subfolder"] = adapter_subfolder
+    model = PeftModel.from_pretrained(model, adapter_path, **kwargs)
 
     print("Merging adapter into base model...")
     model = model.merge_and_unload()
