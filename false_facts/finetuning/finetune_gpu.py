@@ -146,6 +146,7 @@ def train_model(
         "up_proj",
         "gate_proj",
     ],
+    wandb_project_name: str = "false-facts",
 ):
     """Main training function.
 
@@ -155,6 +156,7 @@ def train_model(
         output_dir: Directory to save outputs
         use_lora: Whether to use LoRA for parameter-efficient training
     """
+    os.environ["WANDB_PROJECT"] = wandb_project_name
 
     # Auto-download from HuggingFace if dataset_path is a repo ID
     if "/" in dataset_path and not os.path.exists(dataset_path):
@@ -206,7 +208,8 @@ def train_model(
         logging_dir=f"{output_dir}/logs",
         logging_steps=10,
         save_strategy=save_strategy,
-        report_to="none",
+        report_to="wandb",
+        run_name=f"{model_name.split('/')[-1]}_lora_r{lora_r}_{num_train_epochs}ep",
     )
 
     eval_dataset = None
